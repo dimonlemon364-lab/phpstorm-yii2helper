@@ -53,6 +53,12 @@ object Yii2ViewResolver {
             return if (viewName.startsWith("@")) resolveAlias(callFile, viewName) else null
         }
 
+        // mailer->compose() resolves against the mail view path (@app/mail by default).
+        if (method == Yii2Names.COMPOSE_METHOD) {
+            return if (viewName.startsWith("@")) resolveAlias(callFile, viewName)
+            else appBaseOf(callFile)?.let { Located(it, "${Yii2Names.MAIL_VIEW_DIR}/$viewName") }
+        }
+
         return when {
             viewName.startsWith("@") -> resolveAlias(callFile, viewName)
             // Relative to the application view path: @app/views.
@@ -104,7 +110,7 @@ object Yii2ViewResolver {
         val classFile = phpClass.containingFile?.virtualFile ?: return null
         val controllersDir = ancestorNamed(classFile, "controllers") ?: return null
         val moduleBase = controllersDir.parent ?: return null
-        val subPath = relativeDirPath(controllersDir, classFile.parent)
+        val subPath = Yii2Psi.relativeDirPath(controllersDir, classFile.parent)
         val controllerId = Yii2Names.controllerId(phpClass.name)
         val views = if (subPath.isEmpty()) "views/$controllerId" else "views/$subPath/$controllerId"
         return moduleBase to views
@@ -152,15 +158,6 @@ object Yii2ViewResolver {
             dir = dir.parent
         }
         return null
-    }
-
-    /** Directory path of [child] relative to [ancestor] (forward slashes, no leading/trailing). */
-    private fun relativeDirPath(ancestor: VirtualFile, child: VirtualFile?): String {
-        if (child == null) return ""
-        val ancestorPath = ancestor.path.trimEnd('/')
-        val childPath = child.path.trimEnd('/')
-        if (childPath == ancestorPath || !childPath.startsWith("$ancestorPath/")) return ""
-        return childPath.removePrefix("$ancestorPath/")
     }
 
     private fun normalize(path: String): String = path.trim('/').replace(Regex("/+"), "/")

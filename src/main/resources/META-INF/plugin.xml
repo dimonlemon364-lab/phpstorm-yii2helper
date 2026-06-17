@@ -8,7 +8,7 @@
     <name>Yii2Helper</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor>Yii2Helper</vendor>
+    <vendor email="dimonlemon364@gmail.com">dymytrii.khomitskyi</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
@@ -16,8 +16,16 @@
         Navigation and tooling for the <a href="https://www.yiiframework.com/">Yii2</a> PHP framework.<br>
         <ul>
             <li>Ctrl/Cmd+Click a view name in <code>render()</code>, <code>renderPartial()</code>,
-                <code>renderAjax()</code> or <code>renderFile()</code> to jump to the view file.</li>
+                <code>renderAjax()</code>, <code>renderFile()</code> or the mailer
+                <code>compose()</code> to jump to the view file.</li>
             <li>Warns when a referenced view file is missing and offers a quick fix to create it.</li>
+            <li>Ctrl/Cmd+Click an action name in a route (<code>redirect()</code>, <code>Url::to()</code>,
+                <code>Url::toRoute()</code>, <code>Url::remember()</code>, <code>Html::a()</code>,
+                <code>Html::beginForm()</code>, <code>UrlManager::createUrl()</code> /
+                <code>createAbsoluteUrl()</code>, and the <code>action</code> option of
+                <code>ActiveForm::begin()</code>) to jump to the controller action &mdash; from
+                controllers and view files alike.</li>
+            <li>Warns when a route's action method is missing and offers a quick fix to create it.</li>
         </ul>
         ]]></description>
 
@@ -38,6 +46,15 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.yii2helper.view.MissingViewInspection"/>
+
+        <psi.referenceContributor language="PHP"
+                                   implementation="com.yii2helper.route.RouteReferenceContributor"/>
+        <localInspection language="PHP"
+                         groupName="Yii2"
+                         displayName="Missing Yii2 action"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.yii2helper.route.MissingActionInspection"/>
     </extensions>
 
 </idea-plugin>

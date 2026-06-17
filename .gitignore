@@ -2,3 +2,5 @@
 .idea
 .intellijPlatform
 build
+CLAUDE.md
+.run/Publish Plugin.run.xml

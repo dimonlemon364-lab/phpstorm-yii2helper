@@ -20,6 +20,10 @@ class Yii2ViewNavigationTest : BasePlatformTestCase() {
             public function render(${'$'}view, ${'$'}params = []) {}
         }
         class View {}
+        namespace yii\mail;
+        class BaseMailer {
+            public function compose(${'$'}view = null, ${'$'}params = []) {}
+        }
     """.trimIndent()
 
     override fun setUp() {
@@ -132,6 +136,88 @@ class Yii2ViewNavigationTest : BasePlatformTestCase() {
 
         val created = myFixture.findFileInTempDir("views/user/index.php")
         assertNotNull("Quick fix should create the view file", created)
+    }
+
+    fun `test mailer compose string view resolves against mail path`() {
+        myFixture.addFileToProject("views/site/index.php", "<?php\n")
+        val mailView = myFixture.addFileToProject("mail/contact-html.php", "<?php\n")
+        val controller = myFixture.addFileToProject(
+            "controllers/SiteController.php",
+            """
+                <?php
+                namespace app\controllers;
+                use yii\base\Controller;
+                use yii\mail\BaseMailer;
+                class SiteController extends Controller {
+                    public function actionContact() {
+                        ${'$'}mailer = new BaseMailer();
+                        ${'$'}mailer->compose('contact-html');
+                    }
+                }
+            """.trimIndent(),
+        )
+
+        assertSame(mailView.virtualFile, resolveViewRef(controller, "contact-html"))
+    }
+
+    fun `test mailer compose html and text config views resolve`() {
+        myFixture.addFileToProject("views/site/index.php", "<?php\n")
+        val htmlView = myFixture.addFileToProject("mail/contact-html.php", "<?php\n")
+        val textView = myFixture.addFileToProject("mail/contact-text.php", "<?php\n")
+        val controller = myFixture.addFileToProject(
+            "controllers/SiteController.php",
+            """
+                <?php
+                namespace app\controllers;
+                use yii\base\Controller;
+                use yii\mail\BaseMailer;
+                class SiteController extends Controller {
+                    public function actionContact() {
+                        ${'$'}mailer = new BaseMailer();
+                        ${'$'}mailer->compose(['html' => 'contact-html', 'text' => 'contact-text']);
+                    }
+                }
+            """.trimIndent(),
+        )
+
+        assertSame(htmlView.virtualFile, resolveViewRef(controller, "contact-html"))
+        assertSame(textView.virtualFile, resolveViewRef(controller, "contact-text"))
+    }
+
+    fun `test missing mailer view is flagged with create quick fix`() {
+        myFixture.addFileToProject("views/site/index.php", "<?php\n")
+        myFixture.enableInspections(MissingViewInspection())
+        val controller = myFixture.addFileToProject(
+            "controllers/SiteController.php",
+            """
+                <?php
+                namespace app\controllers;
+                use yii\base\Controller;
+                use yii\mail\BaseMailer;
+                class SiteController extends Controller {
+                    public function actionContact() {
+                        ${'$'}mailer = new BaseMailer();
+                        ${'$'}mailer->compose('welcome');
+                    }
+                }
+            """.trimIndent(),
+        )
+        myFixture.configureFromExistingVirtualFile(controller.virtualFile)
+
+        val highlights = myFixture.doHighlighting()
+        assertTrue(
+            "Expected a missing-view warning",
+            highlights.any { it.description?.contains("does not exist") == true },
+        )
+
+        val fix = myFixture.getAllQuickFixes().firstOrNull { it.familyName == "Create Yii2 view file" }
+        assertNotNull("Expected a create-view quick fix", fix)
+        myFixture.launchAction(fix!!)
+
+        assertNotNull(
+            "Quick fix should create the mail view file",
+            myFixture.findFileInTempDir("mail/welcome.php"),
+        )
     }
 
     private fun resolveViewRef(file: PsiFile, viewName: String): Any? {

@@ -1,117 +1,79 @@
 # Yii2Helper
 
-[![Twitter Follow](https://img.shields.io/badge/follow-%40JBPlatform-1DA1F2?logo=twitter)](https://twitter.com/JBPlatform)
-[![Developers Forum](https://img.shields.io/badge/JetBrains%20Platform-Join-blue)][jb:forum]
+Navigation and tooling for the [Yii2](https://www.yiiframework.com/) PHP framework in
+PhpStorm. Yii2Helper turns the "magic strings" Yii2 relies on — view names and routes —
+into navigable references, and offers quick fixes to create the targets they point at when
+they don't exist yet.
 
-## Plugin structure
+## Features
 
-A generated project contains the following content structure:
+### View navigation
 
-```
-.
-├── .run/                   Predefined Run/Debug Configurations
-├── build/                  Output build directory
-├── gradle
-│   ├── wrapper/            Gradle Wrapper
-│   ├── libs.versions.toml  Version catalog
-├── src                     Plugin sources
-│   ├── main
-│   │   ├── kotlin/         Kotlin production sources
-│   │   └── resources/      Resources - plugin.xml, icons, messages
-├── .gitignore              Git ignoring rules
-├── build.gradle.kts        Gradle build configuration
-├── gradle.properties       Gradle configuration properties
-├── gradlew                 *nix Gradle Wrapper script
-├── gradlew.bat             Windows Gradle Wrapper script
-├── README.md               README
-└── settings.gradle.kts     Gradle project settings
-```
+Ctrl/Cmd+Click a view name to jump straight to the view file, resolved with Yii2's own
+`View::findViewFile()` rules (`@app`, `//` application-relative and `/` module-relative
+prefixes; controller, widget and nested-view contexts):
 
-In addition to the configuration files, the most crucial part is the `src` directory, which contains our implementation
-and the manifest for our plugin – [plugin.xml][file:plugin.xml].
+- `render()`, `renderPartial()`, `renderAjax()`, `renderFile()`
+- the mailer `compose()` view — a plain name or a `['html' => …, 'text' => …]` config,
+  resolved against `@app/mail`
 
-> [!NOTE]
-> To use Java in your plugin, create the `/src/main/java` directory.
+When the referenced view file is missing, an inspection warns on the view name and offers a
+quick fix that creates the file from a Yii2 view template.
 
-## Plugin configuration file
+### Route / action navigation
 
-The plugin configuration file is a [plugin.xml][file:plugin.xml] file located in the `src/main/resources/META-INF`
-directory.
-It provides general information about the plugin, its dependencies, extensions, and listeners.
+Ctrl/Cmd+Click an action name in a route to jump to the controller action method
+(`actionXxx`). Single-segment, cross-controller, absolute and sub-path routes are resolved;
+inside a view file a relative route resolves against the rendering controller. Recognized
+route-producing calls:
 
-You can read more about this file in the [Plugin Configuration File][docs:plugin.xml] section of our documentation.
+- `redirect([...])`
+- `Url::to()`, `Url::toRoute()`, `Url::remember()`
+- `Html::a()`, `Html::beginForm()`
+- `UrlManager::createUrl()` / `createAbsoluteUrl()`
+- the `'action'` config key of `ActiveForm::begin([...])`
 
-If you're still not quite sure what this is all about, read [Introduction to IntelliJ Platform][docs:intro].
+When the route's action method is missing, an inspection warns and offers a quick fix that
+creates the `actionXxx()` method rendering the matching view.
 
-## Predefined Run/Debug configurations
+## Requirements
 
-Within the default project structure, there is a `.run` directory provided containing predefined *Run/Debug
-configurations* that expose corresponding Gradle tasks:
+- **PhpStorm 2025.3.5+** (build `253`+). PhpStorm is required as the base IDE because the
+  bundled PHP plugin depends on the `com.intellij.modules.php-capable` platform module,
+  which IntelliJ IDEA — even Ultimate — does not provide.
+- **JDK 21** for building (a JetBrains Runtime works).
 
-| Configuration name | Description                                                                                                                                                                         |
-|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Run Plugin         | Runs [`:runIde`][gh:intellij-platform-gradle-plugin-runIde] IntelliJ Platform Gradle Plugin task. Use the *Debug* icon for plugin debugging.                                        |
-| Run Tests          | Runs [`:test`][gradle:lifecycle-tasks] Gradle task.                                                                                                                                 |
-| Run Verifications  | Runs [`:verifyPlugin`][gh:intellij-platform-gradle-plugin-verifyPlugin] IntelliJ Platform Gradle Plugin task to check the plugin compatibility against the specified IntelliJ IDEs. |
+## Building & running
 
-> [!NOTE]
-> You can find the logs from the running task in the `idea.log` tab.
+The project uses the Gradle wrapper with the IntelliJ Platform Gradle Plugin (v2).
 
-## Publishing the plugin
+| Task | Command |
+|------|---------|
+| Run the plugin in a sandbox IDE | `./gradlew runIde` |
+| Run tests | `./gradlew test` |
+| Verify compatibility against target IDEs | `./gradlew verifyPlugin` |
+| Build the distributable | `./gradlew buildPlugin` (output in `build/distributions/`) |
+| Publish to JetBrains Marketplace | `./gradlew publishPlugin` |
 
-> [!TIP]
-> Make sure to follow all guidelines listed in [Publishing a Plugin][docs:publishing] to follow all recommended and
-> required steps.
+The same tasks are wired as IDE run configurations in `.run/` (Run Plugin, Run Tests, Run
+Verifications, Publish Plugin).
 
-Releasing a plugin to [JetBrains Marketplace](https://plugins.jetbrains.com) is a straightforward operation that uses
-the `publishPlugin` Gradle task provided by
-the [intellij-platform-gradle-plugin][gh:intellij-platform-gradle-plugin-docs].
+## Publishing
 
-You can also upload the plugin to the [JetBrains Plugin Repository](https://plugins.jetbrains.com/plugin/upload)
-manually via UI.
+Releasing to [JetBrains Marketplace](https://plugins.jetbrains.com) uses the
+`publishPlugin` Gradle task (or the **Publish Plugin** run configuration):
 
-## Useful links
+1. Bump `version` in `gradle.properties`.
+2. Document the changes under a matching `## <version>` section in [CHANGELOG.md](./CHANGELOG.md)
+   — the build renders it into the Marketplace "What's new".
+3. `./gradlew buildPlugin` then `./gradlew verifyPlugin`.
+4. `./gradlew publishPlugin` to sign + upload.
 
-- [IntelliJ Platform SDK Plugin SDK][docs]
-- [IntelliJ Platform Gradle Plugin Documentation][gh:intellij-platform-gradle-plugin-docs]
-- [IntelliJ Platform Explorer][jb:ipe]
-- [JetBrains Marketplace Quality Guidelines][jb:quality-guidelines]
-- [IntelliJ Platform UI Guidelines][jb:ui-guidelines]
-- [JetBrains Marketplace Paid Plugins][jb:paid-plugins]
-- [IntelliJ SDK Code Samples][gh:code-samples]
+Publishing requires environment variables (never committed): `PUBLISH_TOKEN`, and for
+signing `CERTIFICATE_CHAIN` / `PRIVATE_KEY` / `PRIVATE_KEY_PASSWORD`. The very first version
+of a new plugin must be uploaded once via the [Marketplace web UI](https://plugins.jetbrains.com/plugin/add)
+to create the listing; subsequent releases can use `publishPlugin`.
 
-[docs]: https://plugins.jetbrains.com/docs/intellij
+## License
 
-[docs:intro]: https://plugins.jetbrains.com/docs/intellij/intellij-platform.html?from=IJPluginTemplate
-
-[docs:plugin.xml]: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html?from=IJPluginTemplate
-
-[docs:publishing]: https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginTemplate
-
-[file:plugin.xml]: ./src/main/resources/META-INF/plugin.xml
-
-[gh:code-samples]: https://github.com/JetBrains/intellij-sdk-code-samples
-
-[gh:intellij-platform-gradle-plugin]: https://github.com/JetBrains/intellij-platform-gradle-plugin
-
-[gh:intellij-platform-gradle-plugin-docs]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
-
-[gh:intellij-platform-gradle-plugin-runIde]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html#runIde
-
-[gh:intellij-platform-gradle-plugin-verifyPlugin]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html#verifyPlugin
-
-[gradle:lifecycle-tasks]: https://docs.gradle.org/current/userguide/java_plugin.html#lifecycle_tasks
-
-[jb:github]: https://github.com/JetBrains/.github/blob/main/profile/README.md
-
-[jb:forum]: https://platform.jetbrains.com/
-
-[jb:quality-guidelines]: https://plugins.jetbrains.com/docs/marketplace/quality-guidelines.html
-
-[jb:paid-plugins]: https://plugins.jetbrains.com/docs/marketplace/paid-plugins-marketplace.html
-
-[jb:quality-guidelines]: https://plugins.jetbrains.com/docs/marketplace/quality-guidelines.html
-
-[jb:ipe]: https://jb.gg/ipe
-
-[jb:ui-guidelines]: https://jetbrains.github.io/ui
+Licensed under the [MIT License](./LICENSE).

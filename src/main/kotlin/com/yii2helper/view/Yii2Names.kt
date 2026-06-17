@@ -19,8 +19,38 @@ object Yii2Names {
     const val WIDGET_FQN = "\\yii\\base\\Widget"
     const val VIEW_FQN = "\\yii\\base\\View"
 
+    const val URL_HELPER_FQN = "\\yii\\helpers\\Url"
+    const val HTML_HELPER_FQN = "\\yii\\helpers\\Html"
+    const val URL_MANAGER_FQN = "\\yii\\web\\UrlManager"
+    const val ACTIVE_FORM_FQN = "\\yii\\widgets\\ActiveForm"
+    const val MAILER_FQN = "\\yii\\mail\\BaseMailer"
+
+    /** Instance method (on a controller/response) whose first array argument is a route. */
+    const val REDIRECT_METHOD = "redirect"
+
+    /** Mailer method (yii\mail\BaseMailer::compose) whose view argument names a mail view. */
+    const val COMPOSE_METHOD = "compose"
+
+    /** Sub-directory (under the application base) holding mailer views: yii\mail\BaseMailer::$viewPath. */
+    const val MAIL_VIEW_DIR = "mail"
+
+    /** Hash keys under which compose() carries a view name. */
+    val MAILER_VIEW_KEYS: Set<String> = setOf("html", "text")
+
     /** Default view file extension (yii\base\View::$defaultExtension). */
     const val DEFAULT_EXTENSION = "php"
+
+    /**
+     * Converts an action/controller id to CamelCase (Yii Inflector::id2camel / camelize).
+     * Splits on '-' and capitalizes each part: "create-post" -> "CreatePost", "index" -> "Index".
+     */
+    fun id2camel(id: String): String =
+        id.split('-').filter { it.isNotEmpty() }.joinToString("") { part ->
+            part.replaceFirstChar { it.uppercaseChar() }
+        }
+
+    /** Action method name for an action id: "index" -> "actionIndex". */
+    fun actionMethodName(actionId: String): String = "action" + id2camel(actionId)
 
     /**
      * Converts a CamelCase string to an id (Yii Inflector::camel2id with '-' separator).
